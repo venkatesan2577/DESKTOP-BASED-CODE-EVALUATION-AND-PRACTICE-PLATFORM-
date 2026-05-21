@@ -1,0 +1,191 @@
+package hacker_project;
+
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Font;
+import java.io.BufferedReader;
+import java.io.FileWriter;
+import java.io.InputStreamReader;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTextArea;
+
+public class code3 {
+	
+	
+	static final String url = "jdbc:mysql://localhost:3306/hackerrank";
+    static final String user = "root";
+    static final String pass = "2577";
+	
+	static JTextArea codeArea3;
+	static JTextArea outputArea3;
+	static JTextArea problemArea3;
+    static JButton runButton3;
+    static int problemId3 = 3;
+    static String expectedOutput3 = "";
+	
+	public static void code_3() {
+		JFrame f=new JFrame("qus2 & ans2 & output");
+		f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		
+		// --------- FIRST PANEL (Problem Statement) ----------
+		
+				problemArea3 =new JTextArea();
+				problemArea3.setEditable(false);
+				problemArea3.setFont(new Font("Consolas", Font.PLAIN, 18));
+				JScrollPane problemScroll3 = new JScrollPane(problemArea3);
+		
+		// --------- MIDDLE PANEL (Code Editor) ----------
+				
+		        codeArea3 = new JTextArea();
+		        JScrollPane codeScroll3 = new JScrollPane(codeArea3);
+		        codeArea3.setFont(new Font("Consolas", Font.PLAIN, 18));
+		        codeArea3.setText(
+		        		  "\npublic class Main{\n"
+		        		+ "  public static void main(String[] args) {\n"
+		        		+"\nint n=5;"
+		        		+"\nSystem.out.println( );"
+		        		+ "     \n"
+		        		+ "     }\n"
+		        		+ "  }"
+		        		);
+		        
+		     // --------- LAST PANEL (Output) ----------
+		        
+		        outputArea3 = new JTextArea();
+		        outputArea3.setEditable(false);
+		        outputArea3.setFont(new Font("Consolas", Font.PLAIN, 18));
+		        JScrollPane outputScroll3 = new JScrollPane(outputArea3);  
+		        
+		      //---------- RUN BUTTON ----------
+		        
+		        runButton3=new JButton("Compile & Submit");
+		        runButton3.setBackground(Color.GREEN);
+		        runButton3.setFont(new Font("Arial",Font.BOLD,30));
+		        runButton3.addActionListener(e-> compileRunValidate());
+		        runButton3.setBounds(522,700,514,65);
+		        f.add(runButton3);
+   
+		        
+		        JButton nxt3 =new JButton("Go to ScoreBoard");
+				nxt3.setBounds(1070,700,450,65);
+				nxt3.setFont(new Font("Arial",Font.BOLD,30));
+				nxt3.setBackground(Color.GREEN);
+				nxt3.setForeground(Color.BLACK);
+				f.add(nxt3);
+				
+				nxt3.addActionListener(e->{
+					f.dispose();
+					
+					score.scoreboard();
+				});
+		        
+		        loadProblem3();
+		        
+				JSplitPane split1 =new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,problemScroll3,codeScroll3);
+				split1.setDividerLocation(500);
+				f.add(split1);
+				
+				JSplitPane split2 =new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,split1,outputScroll3);
+				split2.setDividerLocation(1050);
+				f.add(split2);
+
+				
+				f.setSize(1600,820);
+				f.setVisible(true);
+	}
+	
+	private static void loadProblem3() {
+		try(Connection con=DriverManager.getConnection(url,user,pass)){
+			PreparedStatement ps=con.prepareStatement("select * from problem where problem_id = ?");
+			ps.setInt(1, problemId3);
+			ResultSet rs=ps.executeQuery();
+			
+			if(rs.next()) {
+				problemArea3.setText(
+						"\nTitle: " + rs.getString("title")+"\n\n"+
+				rs.getString("description"));
+				
+				expectedOutput3 =rs.getString("expected_output");
+				if(expectedOutput3 != null) {
+					expectedOutput3=expectedOutput3.trim();
+				}else {
+					expectedOutput3="";
+				}
+			}
+			} catch(Exception e) {
+				problemArea3.setText("DB Error: "+e.getMessage());
+			}
+	}
+	
+	private static  void compileRunValidate() {
+		try {
+			FileWriter fw=new FileWriter("Main.java");
+			fw.write(codeArea3.getText());
+			fw.close();
+			
+			
+			ProcessBuilder compilePB=new ProcessBuilder("javac","Main.java");
+			Process cp=compilePB.start();
+			cp.waitFor();
+			
+			BufferedReader err=new BufferedReader(new InputStreamReader(cp.getErrorStream()));
+			String line;
+			if ((line = err.readLine()) != null) {
+                outputArea3.setText("Compilation Error:\n" + line);
+                saveResult("Compilation Error", "FAILED");  
+                return;
+
+            }
+			
+			ProcessBuilder runPB =
+	                new ProcessBuilder("java", "Main");
+	        Process rp = runPB.start();
+	        
+	        BufferedReader out = new BufferedReader(new InputStreamReader(rp.getInputStream()));
+	        String output = "";
+	        while ((line = out.readLine()) != null) {
+	                    output += line;
+	                }
+	        
+	        String status = output.trim().equals(expectedOutput3) ? "PASSED" : "FAILED";        
+			
+	        outputArea3.setText(
+	                "\nOutput: " + output + "\n\nExpected: " +
+	                expectedOutput3 + "\n\nStatus: " + status
+	            );
+			
+			saveResult(output, status);	
+		}
+		catch (Exception e) {
+            outputArea3.setText("Error: " + e.getMessage());
+        }
+		
+	}
+	private static void saveResult(String output, String status) {
+		 try (Connection con = DriverManager.getConnection(url,user,pass)) {
+	            PreparedStatement ps = con.prepareStatement(
+	                    "INSERT INTO submission(problem_id,output,status) VALUES(?,?,?)"
+	                );
+	            ps.setInt(1, problemId3);
+	            ps.setString(2, output);
+	            ps.setString(3, status);
+	            ps.executeUpdate();
+	        }
+		 catch (Exception ignored) {}
+		
+	}
+
+	public static void main(String[] args) {
+		code3.code_3();
+
+	}
+
+}
