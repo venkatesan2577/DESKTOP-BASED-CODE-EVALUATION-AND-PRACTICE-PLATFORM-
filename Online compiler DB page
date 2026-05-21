@@ -1,0 +1,150 @@
+package main_project;
+import javax.swing.*;
+import java.awt.*;
+import java.io.*;
+import java.sql.*;
+
+public class OnlineCompilerDB extends JFrame {
+
+    JTextArea codeArea, outputArea, problemArea;
+    JButton runButton;
+    int problemId = 1;
+    String expectedOutput = "";
+
+    public OnlineCompilerDB() {
+        setTitle("Mini HackerRank - Compiler");
+        setSize(900, 650);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        
+        problemArea = new JTextArea();
+        problemArea.setEditable(false);
+        problemArea.setBackground(new Color(240,240,240));
+
+        codeArea = new JTextArea();
+        codeArea.setFont(new Font("Consolas", Font.PLAIN, 14));
+        codeArea.setText(
+            "public class Main {\n" +
+            "  public static void main(String[] args) {\n" +
+            "    System.out.println(\"Hello HackerRank\");\n" +
+            "  }\n" +
+            "}"
+        );
+
+        outputArea = new JTextArea();
+        outputArea.setEditable(false);
+
+        runButton = new JButton("Compile & Submit");
+        runButton.addActionListener(e -> compileRunValidate());
+
+        loadProblem();
+
+        JSplitPane split1 = new JSplitPane(
+            JSplitPane.VERTICAL_SPLIT,
+            new JScrollPane(problemArea),
+            new JScrollPane(codeArea)
+        );
+        split1.setDividerLocation(150);
+
+        JSplitPane split2 = new JSplitPane(
+            JSplitPane.VERTICAL_SPLIT,
+            split1,
+            new JScrollPane(outputArea)
+        );
+        split2.setDividerLocation(400);
+
+        add(runButton, BorderLayout.NORTH);
+        add(split2, BorderLayout.CENTER);
+    }
+
+    private void loadProblem() {
+        try (Connection con = DBConnection.getConnection()) {
+            PreparedStatement ps =
+                con.prepareStatement("SELECT * FROM problems WHERE problem_id=?");
+            ps.setInt(1, problemId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                problemArea.setText(
+                    "Title: " + rs.getString("title") + "\n\n" +
+                    rs.getString("description")
+                );
+                expectedOutput = rs.getString("expected_output");
+                if (expectedOutput != null) {
+                    expectedOutput = expectedOutput.trim();
+                } else {
+                    expectedOutput = "";
+                }
+
+            }
+        } catch (Exception e) {
+            problemArea.setText("DB Error: " + e.getMessage());
+        }
+    }
+
+    private void compileRunValidate() {
+        outputArea.setText("");
+
+        try {
+            FileWriter fw = new FileWriter("Main.java");
+            fw.write(codeArea.getText());
+            fw.close();
+
+            ProcessBuilder compilePB =
+                new ProcessBuilder("javac", "Main.java");
+            Process cp = compilePB.start();
+            cp.waitFor();
+
+            BufferedReader err =
+                new BufferedReader(new InputStreamReader(cp.getErrorStream()));
+            String line;
+            if ((line = err.readLine()) != null) {
+                outputArea.setText("Compilation Error:\n" + line);
+                saveResult("Compilation Error", "FAILED");
+                return;
+            }
+
+            ProcessBuilder runPB =
+                new ProcessBuilder("java", "Main");
+            Process rp = runPB.start();
+
+            BufferedReader out =
+                new BufferedReader(new InputStreamReader(rp.getInputStream()));
+            String output = "";
+            while ((line = out.readLine()) != null) {
+                output += line;
+            }
+
+            String status =
+                output.trim().equals(expectedOutput) ? "PASSED" : "FAILED";
+
+            outputArea.setText(
+                "Output: " + output + "\nExpected: " +
+                expectedOutput + "\nStatus: " + status
+            );
+
+            saveResult(output, status);
+
+        } catch (Exception e) {
+            outputArea.setText("Error: " + e.getMessage());
+        }
+    }
+
+    private void saveResult(String output, String status) {
+        try (Connection con = DBConnection.getConnection()) {
+            PreparedStatement ps =
+                con.prepareStatement(
+                    "INSERT INTO submissions(problem_id,output,status) VALUES(?,?,?)"
+                );
+            ps.setInt(1, problemId);
+            ps.setString(2, output);
+            ps.setString(3, status);
+            ps.executeUpdate();
+        } catch (Exception ignored) {}
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() ->
+            new OnlineCompilerDB().setVisible(true)
+        );
+    }
+}
