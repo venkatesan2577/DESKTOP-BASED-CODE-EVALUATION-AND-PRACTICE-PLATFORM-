@@ -1,0 +1,135 @@
+package hacker_project;
+
+import java.awt.Color;
+import java.awt.Font;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+
+import javax.swing.*;
+
+public class login_pg{
+	static final String url = "jdbc:mysql://localhost:3306/hackerrank";
+    static final String user = "root";
+    static final String pass = "2577";
+	public static void login() {
+	
+		JFrame f=new JFrame("login");
+		JLabel l=new JLabel("HackerRank");
+		f.add(l);
+		l.setBounds(600, 50, 300, 50);
+		l.setFont(new Font("Arial",Font.BOLD,40));
+		JLabel smallbox=new JLabel(" ");
+		smallbox.setOpaque(true);
+		smallbox.setBounds(840, 50, 30, 40);
+		smallbox.setBackground(Color.GREEN);
+		f.add(smallbox);
+		
+		JLabel l1=new JLabel("Welcome back !");
+		f.add(l1);
+		l1.setBounds(450, 100, 300, 100);
+		l1.setFont(new Font("Arial",Font.BOLD,25));
+		JLabel l2=new JLabel("Login to your account");
+		f.add(l2);
+		l2.setBounds(450, 140, 500, 100);
+		l2.setFont(new Font("Arial",Font.BOLD,25));
+		
+		
+		//sign up
+		JButton signbut =new JButton("Sign Up");
+		signbut.setBounds(450, 240, 250, 80);
+		signbut.setFont(new Font("Arial",Font.PLAIN,30));
+		f.add(signbut);
+		
+		signbut.addActionListener(e->{
+			f.dispose();
+			signin_pg.signup();
+		});
+		
+		//Log in
+		JButton logbut =new JButton("Log In");
+		logbut.setBounds(750, 240, 250, 80);
+		logbut.setFont(new Font("Arial",Font.PLAIN,30));
+		f.add(logbut);
+		JTextField name=new JTextField("   👤 Your username or Email");
+		name.setFont(name.getFont().deriveFont(15f));
+		name.setBounds(450, 350, 550, 50);
+		
+		f.add(name);
+		
+		
+		
+		JTextField password=new JTextField("   🔒 Your password");
+		password.setFont(password.getFont().deriveFont(15f));
+		password.setBounds(450, 430, 550, 50);
+		f.add(password);
+		
+		JButton subbut =new JButton("SUBMIT");
+		subbut.setBounds(450, 550, 220, 50);
+		f.add(subbut);
+		subbut.setOpaque(true);
+		subbut.setBackground(Color.GREEN);
+		subbut.setFont(new Font("Arial",Font.BOLD,20));
+		subbut.setForeground(Color.BLACK);
+		
+		
+		JButton nxtbut =new JButton("NEXT");
+		nxtbut.setBounds(780, 550, 220, 50);
+		f.add(nxtbut);
+		nxtbut.setOpaque(true);
+		nxtbut.setBackground(Color.GREEN);
+		nxtbut.setFont(new Font("Arial",Font.BOLD,20));
+		nxtbut.setForeground(Color.BLACK);
+		
+		nxtbut.addActionListener(e->{
+			f.dispose();
+			code1.code_1();
+		});
+		
+		JLabel text=new JLabel("Don't have an account? Sign up");
+		text.setBounds(450, 620, 200, 50);
+		f.add(text);
+		JLabel text1=new JLabel("Already have an account? Log in");
+		text1.setBounds(810, 620, 200, 50);
+		f.add(text1);
+		
+		subbut.addActionListener(e->{
+			String uname=name.getText();
+			String mail=name.getText();
+			String pword=password.getText();
+					
+			try {
+				Connection con=DriverManager.getConnection(url,user,pass);
+				 PreparedStatement ps = con.prepareStatement("select * from users where (fullname=? or email=?) and password=?");
+				ps.setString(1,uname);
+				ps.setString(2,mail);
+				ps.setString(3,pword);
+				ResultSet rs=ps.executeQuery();
+				
+				
+				if(rs.next()) {
+					JOptionPane .showMessageDialog(f, "Login Successfully");
+				}
+				else {
+					JOptionPane.showMessageDialog(f,"Invalid username or password");
+				}
+			}
+				catch(Exception ex) {
+					JOptionPane.showMessageDialog(f,"Database Error");
+				}
+			
+			
+		});
+		
+		
+		f.setSize(1600,8260);
+		f.setLayout(null);
+		f.setVisible(true);
+}
+
+		
+		public static void main(String[] args) {
+			login();
+	}
+}
